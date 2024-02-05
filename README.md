@@ -2,13 +2,23 @@
 
 Package `calltimer` implemenents instrumentation that can be called from Go code in order to estimate the spent time.
 
-- The tracked time is only the duration (spent in a call, or spent in a block of code). The package doesn't track other performance-related timings, like CPU time, or I/O. Use the performance tools of your operating system for that purpose.
+<!-- toc -->
+- [API](#api)
+  - [Defining timers](#defining-timers)
+  - [Logging the spent time](#logging-the-spent-time)
+  - [Reporting](#reporting)
+  - [Disabling sampling and reporting](#disabling-sampling-and-reporting)
+- [Examples](#examples)
+  - [Example 1: Linear calling](#example-1-linear-calling)
+  - [Example 2: An <code>inner()</code> function is called from 2 places](#example-2-an-inner-function-is-called-from-2-places)
+<!-- /toc -->
+
+## General
+
+- Package `calltimer` only tracks the duration (spent in a call, or spent in a block of code). The package doesn't track other performance-related timings, like CPU time, or I/O. Use the performance tools of your operating system for that purpose.
 - The package generates a report which displays the total spent time, number of invocations, and average time per invocation.
 - Reporting can group results in a tree-like structure: the display of a timer can be set under a parent.
 - Package `calltimer` is thread-safe. Creating timers, updating timer activity and reporting can occur from concurrent go-routines.
-
-<!-- toc -->
-<!-- /toc -->
 
 ## API
 
