@@ -66,8 +66,10 @@ func main() {
 	calltimer.ReportAll(os.Stdout)
 
 	// Example output:
-	// 	outer    total 329.379542ms in  2 calls, avg 164.689771ms
-	//   middle1 total 264.478584ms in  6 calls, avg  44.079764ms
-	//   middle2 total  64.893792ms in  6 calls, avg  10.815632ms
-	//     inner total 522.944044ms in 48 calls, avg  10.894667ms
+	// outer     total 327.427417ms in  2 calls, avg 163.713708ms
+	//   middle1 total 261.320251ms in  6 calls, avg  43.553375ms
+	//     inner total 524.047914ms in 48 calls, avg  10.917664ms
+	//   middle2 total  66.100376ms in  6 calls, avg  11.016729ms}
+	// Note that inner is only reported under middle1; it's set up as a child
+	// of middle1. Even though it's also called by middle2.
 }

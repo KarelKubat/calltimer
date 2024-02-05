@@ -223,17 +223,7 @@ func (t *Timer) report(level int, act []activity) []activity {
 		name:     t.Name,
 	})
 	for _, c := range t.Children {
-		act = append(act, activity{
-			level:    level + 1,
-			duration: c.TotalElapsed,
-			times:    c.CalledTimes,
-			name:     c.Name,
-		})
-	}
-	for _, c := range t.Children {
-		for _, g := range c.Children {
-			act = g.report(level+2, act)
-		}
+		act = c.report(level+1, act)
 	}
 	return act
 }
