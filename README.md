@@ -3,6 +3,7 @@
 Package `calltimer` implemenents instrumentation that can be called from Go code in order to estimate the spent time.
 
 <!-- toc -->
+- [General](#general)
 - [API](#api)
   - [Defining timers](#defining-timers)
   - [Logging the spent time](#logging-the-spent-time)
