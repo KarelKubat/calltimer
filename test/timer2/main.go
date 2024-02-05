@@ -1,4 +1,4 @@
-// file: test/timer1/main.go
+// file: test/timer2/main.go
 package main
 
 import (
@@ -60,16 +60,26 @@ func outer() {
 }
 
 func main() {
+	// Another root timer, just a dummy.
+	dummyTop := calltimer.MustNew("dummy-top", nil)
+	_ = calltimer.MustNew("dummy-sub", dummyTop)
+
 	for i := 0; i < 2; i++ {
 		outer()
 	}
 	calltimer.ReportAll(os.Stdout)
 
 	// Example output:
-	// outer     total 327.427417ms in  2 calls, avg 163.713708ms
-	//   middle1 total 261.320251ms in  6 calls, avg  43.553375ms
-	//     inner total 524.047914ms in 48 calls, avg  10.917664ms
-	//   middle2 total  66.100376ms in  6 calls, avg  11.016729ms}
-	// Note that inner is only reported under middle1; it's set up as a child
-	// of middle1. Even though it's also called by middle2.
+	// 	outer       total 328.324125ms in  2 calls, avg 164.162062ms
+	// 	  middle1   total 262.224458ms in  6 calls, avg  43.704076ms
+	// 	    inner   total 524.960087ms in 48 calls, avg  10.936668ms
+	// 	  middle2   total  66.091876ms in  6 calls, avg  11.015312ms
+	//  dummy-top   total           0s in  0 calls
+	// 	  dummy-sub total           0s in  0 calls
+	//
+	// Notes:
+	// - inner is only reported under middle1, that is the timer's parent/child
+	//   relationship
+	// - dummy-top and its dummy-sub are also reported, but without averages and
+	//   with zero time spent
 }

@@ -11,11 +11,20 @@ import (
 	"time"
 )
 
+// Per-timer activity report.
 type activity struct {
 	level    int
 	duration time.Duration
 	times    int
 	name     string
+}
+
+// String lengths over all roots
+type reportLen struct {
+	leaderLen int // String length of indentation + name
+	totalLen  int // String length of total duration
+	callsLen  int // String length of # of calls
+	avgLen    int // String length of average duration
 }
 
 /*
@@ -155,6 +164,10 @@ Example:
 	calltimer.ReportAll()
 */
 func ReportAll(wr io.Writer) {
+	rLen := &reportLen{}
+	for _, r := range roots {
+		r.calculateLengths(rLen, 0)
+	}
 	if !Active {
 		return
 	}
@@ -162,7 +175,7 @@ func ReportAll(wr io.Writer) {
 	defer mu.Unlock()
 
 	for _, r := range roots {
-		r.Report(wr)
+		r.Report(wr, rLen)
 	}
 }
 
@@ -176,54 +189,51 @@ Report sends a report for the applicable timer to the passed-in io.Writer. For e
 
 In this case, there is a one-to-one parent/child relationship: main has one child outer, which has one child middle, which has one child inner.
 */
-func (t *Timer) Report(wr io.Writer) {
+func (t *Timer) Report(wr io.Writer, rLen *reportLen) {
 	if !Active {
 		return
 	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	act := t.report(0, nil)
-	leaderLen := 0
-	totalLen := 0
-	callsLen := 0
-	avgLen := 0
-	for _, a := range act {
-		leaderLen = max(leaderLen, a.level*2+len(a.name))
-		totalLen = max(totalLen, len(fmt.Sprintf("%v", a.duration)))
-		callsLen = max(callsLen, len(fmt.Sprintf("%v", a.times)))
-		if a.times > 0 {
-			avgLen = max(avgLen, len(fmt.Sprintf("%v", a.duration/time.Duration(a.times))))
-		}
+	if rLen == nil {
+		rLen = &reportLen{}
+		t.calculateLengths(rLen, 0)
 	}
-	for _, a := range act {
-		for i := 0; i < a.level; i++ {
-			fmt.Fprintf(wr, "  ")
-		}
-		fmt.Fprint(wr, a.name)
-		for printed := a.level*2 + len(a.name); printed <= leaderLen; printed++ {
-			fmt.Fprint(wr, " ")
-		}
-		fmt.Fprintf(wr, "total %*v in %*v calls", totalLen, a.duration, callsLen, a.times)
-		if a.times > 0 {
-			fmt.Fprintf(wr, ", avg %*v", avgLen, a.duration/time.Duration(a.times))
-		}
-		fmt.Fprintln(wr)
+
+	t.report(0, rLen, wr)
+}
+
+func (t *Timer) calculateLengths(lengths *reportLen, level int) {
+	lengths.leaderLen = max(lengths.leaderLen, level*2+len(t.Name))
+	lengths.totalLen = max(lengths.totalLen, len(fmt.Sprintf("%v", t.TotalElapsed)))
+	lengths.callsLen = max(lengths.callsLen, len(fmt.Sprintf("%v", t.CalledTimes)))
+	if t.CalledTimes > 0 {
+		lengths.avgLen = max(lengths.avgLen,
+			len(fmt.Sprintf("%v", t.TotalElapsed/time.Duration(t.CalledTimes))))
+	}
+	for _, c := range t.Children {
+		c.calculateLengths(lengths, level+1)
 	}
 }
 
-func (t *Timer) report(level int, act []activity) []activity {
-	if !Active {
-		return nil
+func (t *Timer) report(lev int, rLen *reportLen, wr io.Writer) {
+	for i := 0; i < lev; i++ {
+		fmt.Fprint(wr, "  ")
 	}
-	act = append(act, activity{
-		level:    level,
-		duration: t.TotalElapsed,
-		times:    t.CalledTimes,
-		name:     t.Name,
-	})
+	fmt.Fprint(wr, t.Name)
+	for printed := lev*2 + len(t.Name); printed <= rLen.leaderLen; printed++ {
+		fmt.Fprint(wr, " ")
+	}
+	fmt.Fprintf(wr, "total %*v in %*v calls",
+		rLen.totalLen, t.TotalElapsed, rLen.callsLen, t.CalledTimes)
+	if t.CalledTimes > 0 {
+		fmt.Fprintf(wr, ", avg %*v",
+			rLen.avgLen, t.TotalElapsed/time.Duration(t.CalledTimes))
+	}
+	fmt.Fprintln(wr)
+
 	for _, c := range t.Children {
-		act = c.report(level+1, act)
+		c.report(lev+1, rLen, wr)
 	}
-	return act
 }
