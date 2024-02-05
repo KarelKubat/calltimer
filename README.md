@@ -7,6 +7,9 @@ Package `calltimer` implemenents instrumentation that can be called from Go code
 - Reporting can group results in a tree-like structure: the display of a timer can be set under a parent.
 - Package `calltimer` is thread-safe. Creating timers, updating timer activity and reporting can occur from concurrent go-routines.
 
+<!-- toc -->
+<!-- /toc -->
+
 ## API
 
 ### Defining timers
