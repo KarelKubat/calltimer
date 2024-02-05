@@ -41,7 +41,7 @@ func main() {
 
 Errors occur when, e.g., the name of a timer was already used. Such names must be unique.
 
-Defining `subTimer` as a child of `topTimer` has only the effect that in reporting the `subTimer`s output is displayed under `topTimer` and indented. If you don't care about such grouping suggestions, then you can just as well define `subTimer` with a `nil` parent.
+Defining `subTimer` as a child of `topTimer` has only the effect that in reporting the `subTimer`s output is displayed under `topTimer` and indented. If you don't care about such grouping suggestions, then you can just as well define `subTimer` with a `nil` parent, which makes it another "root" timer.
 
 Instead of `calltimer.New()`, one may use `calltimer.MustNew()`, which panics upon an error.  This is typically handy for globals:
 
@@ -91,7 +91,7 @@ func main() {
     // Call top(), which in turn calls sub()
     top()
 
-    // Report
+    // Report how much time top() and sub() spent
     calltimer.ReportAll(io.Stdout)
 }
 ```
