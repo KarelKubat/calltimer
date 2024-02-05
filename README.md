@@ -5,6 +5,7 @@ Package `calltimer` implemenents instrumentation that can be called from Go code
 - The tracked time is only the duration (spent in a call, or spent in a block of code). The package doesn't track other performance-related timings, like CPU time, or I/O. Use the performance tools of your operating system for that purpose.
 - The package generates a report which displays the total spent time, number of invocations, and average time per invocation.
 - Reporting can group results in a tree-like structure: the display of a timer can be set under a parent.
+- Package `calltimer` is thread-safe. Creating timers, updating timer activity and reporting can occur from concurrent go-routines.
 
 ## API
 
@@ -104,58 +105,58 @@ In this example, `main()` calls `outer()`, which calls `middle()`, which calls `
 package main
 
 import (
-	"os"
-	"time"
+    "os"
+    "time"
 
-	"github.com/KarelKubat/calltimer"
+    "github.com/KarelKubat/calltimer"
 )
 
 var (
-	mainTimer   = calltimer.MustNew("main", nil)
-	outerTimer  = calltimer.MustNew("outer", mainTimer)
-	middleTimer = calltimer.MustNew("middle", outerTimer)
-	innerTimer  = calltimer.MustNew("inner", middleTimer)
+    mainTimer   = calltimer.MustNew("main", nil)
+    outerTimer  = calltimer.MustNew("outer", mainTimer)
+    middleTimer = calltimer.MustNew("middle", outerTimer)
+    innerTimer  = calltimer.MustNew("inner", middleTimer)
 
-	delay = time.Millisecond * 10
+    delay = time.Millisecond * 10
 )
 
 // Estimated runtime: 10ms
 func inner() {
-	defer innerTimer.LogSince(time.Now())
-	time.Sleep(delay)
+    defer innerTimer.LogSince(time.Now())
+    time.Sleep(delay)
 }
 
 // Estimated runtime: 4x the runtime of inner, so 40ms
 func middle() {
-	defer middleTimer.LogSince(time.Now())
-	for i := 0; i < 4; i++ {
-		inner()
-	}
+    defer middleTimer.LogSince(time.Now())
+    for i := 0; i < 4; i++ {
+        inner()
+    }
 }
 
 // Estimated runtime: 3x (runtime of middle + 10ms), so 150ms
 func outer() {
-	defer outerTimer.LogSince(time.Now())
-	for i := 0; i < 3; i++ {
-		time.Sleep(delay)
-		middle()
-	}
+    defer outerTimer.LogSince(time.Now())
+    for i := 0; i < 3; i++ {
+        time.Sleep(delay)
+        middle()
+    }
 }
 
 // Estimated runtime: 2x the runtime of outer, so 300ms
 func main() {
-	start := time.Now()
-	for i := 0; i < 2; i++ {
-		outer()
-	}
-	mainTimer.LogSince(start)
-	calltimer.ReportAll(os.Stdout)
+    start := time.Now()
+    for i := 0; i < 2; i++ {
+        outer()
+    }
+    mainTimer.LogSince(start)
+    calltimer.ReportAll(os.Stdout)
 
-	// Example output:
-	// main        total 328.434958ms in  1 calls, avg 328.434958ms
-	//   outer     total 328.433792ms in  2 calls, avg 164.216896ms
-	// 	   middle  total 262.526374ms in  6 calls, avg  43.754395ms
-	//   	 inner total 262.508876ms in 24 calls, avg  10.937869ms
+    // Example output:
+    // main        total 328.434958ms in  1 calls, avg 328.434958ms
+    //   outer     total 328.433792ms in  2 calls, avg 164.216896ms
+    // 	   middle  total 262.526374ms in  6 calls, avg  43.754395ms
+    //   	 inner total 262.508876ms in 24 calls, avg  10.937869ms
 }
 ```
 
@@ -166,74 +167,74 @@ func main() {
 package main
 
 import (
-	"os"
-	"sync"
-	"time"
+    "os"
+    "sync"
+    "time"
 
-	"github.com/KarelKubat/calltimer"
+    "github.com/KarelKubat/calltimer"
 )
 
 var (
-	outerTimer   = calltimer.MustNew("outer", nil)
-	middle1Timer = calltimer.MustNew("middle1", outerTimer)
-	middle2Timer = calltimer.MustNew("middle2", outerTimer)
-	innerTimer   = calltimer.MustNew("inner", middle1Timer)
+    outerTimer   = calltimer.MustNew("outer", nil)
+    middle1Timer = calltimer.MustNew("middle1", outerTimer)
+    middle2Timer = calltimer.MustNew("middle2", outerTimer)
+    innerTimer   = calltimer.MustNew("inner", middle1Timer)
 
-	delay = time.Millisecond * 10
+    delay = time.Millisecond * 10
 )
 
 // Estimated runtime: 10ms
 func inner() {
-	defer innerTimer.LogSince(time.Now())
-	time.Sleep(delay)
+    defer innerTimer.LogSince(time.Now())
+    time.Sleep(delay)
 }
 
 // Estimated runtime: 4x the runtime of inner, so 40ms
 func middle1() {
-	defer middle1Timer.LogSince(time.Now())
-	for i := 0; i < 4; i++ {
-		inner()
-	}
+    defer middle1Timer.LogSince(time.Now())
+    for i := 0; i < 4; i++ {
+        inner()
+    }
 }
 
 // Estimated runtime: the runtime of inner, so 10ms
 // inner() gets invoked 4x, but in parallel - counts as one.
 func middle2() {
-	defer middle2Timer.LogSince(time.Now())
-	var wg sync.WaitGroup
-	for i := 0; i < 4; i++ {
-		wg.Add(1)
-		go func() {
-			inner()
-			wg.Done()
-		}()
-	}
-	wg.Wait()
+    defer middle2Timer.LogSince(time.Now())
+    var wg sync.WaitGroup
+    for i := 0; i < 4; i++ {
+        wg.Add(1)
+        go func() {
+            inner()
+            wg.Done()
+        }()
+    }
+    wg.Wait()
 }
 
 // Estimated runtime: 3x the runtime of middle1, plus 3x the runtime of middle2
 // so 3x40ms + 3x10ms = 150ms
 func outer() {
-	defer outerTimer.LogSince(time.Now())
-	for i := 0; i < 3; i++ {
-		middle1()
-	}
-	for i := 0; i < 3; i++ {
-		middle2()
-	}
+    defer outerTimer.LogSince(time.Now())
+    for i := 0; i < 3; i++ {
+        middle1()
+    }
+    for i := 0; i < 3; i++ {
+        middle2()
+    }
 }
 
 func main() {
-	for i := 0; i < 2; i++ {
-		outer()
-	}
-	calltimer.ReportAll(os.Stdout)
+    for i := 0; i < 2; i++ {
+        outer()
+    }
+    calltimer.ReportAll(os.Stdout)
 
-	// Example output:
-	// 	outer    total 329.379542ms in  2 calls, avg 164.689771ms
-	//   middle1 total 264.478584ms in  6 calls, avg  44.079764ms
-	//   middle2 total  64.893792ms in  6 calls, avg  10.815632ms
-	//     inner total 522.944044ms in 48 calls, avg  10.894667ms
+    // Example output:
+    // 	outer    total 329.379542ms in  2 calls, avg 164.689771ms
+    //   middle1 total 264.478584ms in  6 calls, avg  44.079764ms
+    //   middle2 total  64.893792ms in  6 calls, avg  10.815632ms
+    //     inner total 522.944044ms in 48 calls, avg  10.894667ms
 }
 ```
 

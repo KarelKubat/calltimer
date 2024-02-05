@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sync"
 	"time"
 )
 
@@ -26,10 +27,14 @@ type Timer struct {
 	CalledTimes  int           // Number of invocations
 	Parent       *Timer        // Parent, nil when this is a root timer
 	Children     []*Timer      // Dependent children
+	mu           sync.Mutex    // Per-timer lock
 }
 
-var timers = map[string]*Timer{}
-var roots = []*Timer{}
+var (
+	timers = map[string]*Timer{} // Map of timers to avoid duplicate names
+	roots  = []*Timer{}          // List of roots to ReportAll()
+	mu     sync.Mutex            // Global lock for manipulation of global vars
+)
 
 /*
 Active defaults to true. When set to false, no timing is recorded and no reports are generated.
@@ -43,6 +48,8 @@ func New(name string, parent *Timer) (*Timer, error) {
 	if !Active {
 		return nil, nil
 	}
+	mu.Lock()
+	defer mu.Unlock()
 
 	// Name must exist and can't be redefined
 	_, ok := timers[name]
@@ -95,6 +102,8 @@ func (t *Timer) LogDuration(d time.Duration) {
 	if !Active {
 		return
 	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
 
 	t.TotalElapsed += d
 	t.CalledTimes++
@@ -149,6 +158,8 @@ func ReportAll(wr io.Writer) {
 	if !Active {
 		return
 	}
+	mu.Lock()
+	defer mu.Unlock()
 
 	for _, r := range roots {
 		r.Report(wr)
@@ -169,6 +180,9 @@ func (t *Timer) Report(wr io.Writer) {
 	if !Active {
 		return
 	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
 	act := t.report(0, nil)
 	leaderLen := 0
 	totalLen := 0
