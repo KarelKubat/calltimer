@@ -194,9 +194,10 @@ func (t *Timer) Report(wr io.Writer) {
 }
 
 func (t *Timer) reportWithFormatting(wr io.Writer, rLen *reportLen) {
-	if t.hasActivity() {
-		t.report(0, rLen, wr)
+	if !t.hasActivity() {
+		return
 	}
+	t.report(0, rLen, wr)
 }
 
 func (t *Timer) calculateLengths(lengths *reportLen, level int) {
