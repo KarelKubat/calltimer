@@ -239,30 +239,41 @@ func outer() {
 }
 
 func main() {
-    // Another root timer, just a dummy.
-    dummyTop := calltimer.MustNew("dummy-top", nil)
-    _ = calltimer.MustNew("dummy-sub", dummyTop)
+	// Another root timer, just a dummy.
+	dummyTop := calltimer.MustNew("dummy-top", nil)
+	dummySub := calltimer.MustNew("dummy-sub", dummyTop)
 
-    for i := 0; i < 2; i++ {
-        outer()
-    }
-    calltimer.ReportAll(os.Stdout)
+	// Create some activity in the timers outerTimer, and hence in
+	// middle1Timer, middle2Timer and in innerTimer.
+	for i := 0; i < 2; i++ {
+		outer()
+	}
 
-    // Example output:
-    // 	outer       total 328.324125ms in  2 calls, avg 164.162062ms
-    // 	  middle1   total 262.224458ms in  6 calls, avg  43.704076ms
-    // 	    inner   total 524.960087ms in 48 calls, avg  10.936668ms
-    // 	  middle2   total  66.091876ms in  6 calls, avg  11.015312ms
-    //  dummy-top   total           0s in  0 calls
-    // 	  dummy-sub total           0s in  0 calls
-    // Notes:
-    // - inner is only reported under middle1, that is the timer's parent/child
-    //   relationship
-    // - dummy-top and its dummy-sub are also reported, but without averages and
-    //   with zero time spent
+	calltimer.ReportAll(os.Stdout)
+	// Example output:
+	// 	outer       total 328.324125ms in  2 calls, avg 164.162062ms
+	// 	  middle1   total 262.224458ms in  6 calls, avg  43.704076ms
+	// 	    inner   total 524.960087ms in 48 calls, avg  10.936668ms
+	// 	  middle2   total  66.091876ms in  6 calls, avg  11.015312ms
+	// Notes:
+	// - inner is only reported under middle1, that is the timer's parent/child
+	//   relationship
+	// - There is no output for dummy-top, as there is no activity.
+
+	// Create some activity in dummySub.
+	dummySub.LogDuration(time.Second)
+
+	calltimer.ReportAll(os.Stdout)
+	// Example output, which now reports on two root timers:
+	// 	outer       total  329.21975ms in  2 calls, avg 164.609875ms
+	// 	  middle1   total 263.650418ms in  6 calls, avg  43.941736ms
+	// 	    inner   total 524.486669ms in 48 calls, avg  10.926805ms
+	// 	  middle2   total  65.561709ms in  6 calls, avg  10.926951ms
+	//  dummy-top   total           0s in  0 calls
+	// 	  dummy-sub total           1s in  1 calls, avg           1s
 }
 ```
 
-In this example the report tries to group the output according to how the timers are set up (`middle1` and `middle2` are the children of `outer`).
+In this example the report tries to group the output according to how the timers are set up (`middle1` and `middle2` are the children of `outer`, `inner` is a child of `middle1`).
 
-It's the developers' responsibility to define this structure. While running, the package `calltimer` has no idea of the actual call tree. Note however that this structure is only for display purposes (i.e., the indentation level of the report); it doesn't affect the collected data.
+It's the developers' responsibility to define this structure. While running, the package `calltimer` has no idea of the actual call tree. Note however that this structure is only for display purposes (i.e., the indentation level of the report); it affects neither the collected data nor the displayed values.

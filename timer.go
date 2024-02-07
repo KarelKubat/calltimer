@@ -11,14 +11,6 @@ import (
 	"time"
 )
 
-// Per-timer activity report.
-type activity struct {
-	level    int
-	duration time.Duration
-	times    int
-	name     string
-}
-
 // String lengths over all roots
 type reportLen struct {
 	leaderLen int // String length of indentation + name
@@ -69,18 +61,13 @@ func New(name string, parent *Timer) (*Timer, error) {
 		return nil, fmt.Errorf("timer %q is already defined", name)
 	}
 
-	// Root timer
-	if parent == nil {
-		p := &Timer{Name: name, Children: []*Timer{}}
-		roots = append(roots, p)
-		timers[name] = p
-		return p, nil
-	}
-
-	// Child timer
 	t := &Timer{Name: name, Children: []*Timer{}, Parent: parent}
 	timers[name] = t
-	parent.Children = append(parent.Children, t)
+	if parent == nil {
+		roots = append(roots, t)
+	} else {
+		parent.Children = append(parent.Children, t)
+	}
 	return t, nil
 }
 
@@ -160,22 +147,24 @@ Example:
 	r2 := calltimer.MustNew("r2", nil)
 
 	// This reports on root timer "r1" together with its child timer "c1",
-	// and on the other root timer "r2".
+	// and on the other root timer "r2". Root timers without activity are
+	// not reported.
 	calltimer.ReportAll()
 */
 func ReportAll(wr io.Writer) {
-	rLen := &reportLen{}
-	for _, r := range roots {
-		r.calculateLengths(rLen, 0)
-	}
 	if !Active {
 		return
 	}
 	mu.Lock()
 	defer mu.Unlock()
 
+	rLen := &reportLen{}
 	for _, r := range roots {
-		r.Report(wr, rLen)
+		r.calculateLengths(rLen, 0)
+	}
+
+	for _, r := range roots {
+		r.reportWithFormatting(wr, rLen)
 	}
 }
 
@@ -188,23 +177,30 @@ Report sends a report for the applicable timer to the passed-in io.Writer. For e
 	          inner total 260.350961ms in 24 calls, avg  10.847956ms
 
 In this case, there is a one-to-one parent/child relationship: main has one child outer, which has one child middle, which has one child inner.
+
+Timers that have no logged activity are not reported.
 */
-func (t *Timer) Report(wr io.Writer, rLen *reportLen) {
-	if !Active {
+func (t *Timer) Report(wr io.Writer) {
+	if !Active || !t.hasActivity() {
 		return
 	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	if rLen == nil {
-		rLen = &reportLen{}
-		t.calculateLengths(rLen, 0)
-	}
+	rLen := &reportLen{}
+	t.calculateLengths(rLen, 0)
 
 	t.report(0, rLen, wr)
 }
 
+func (t *Timer) reportWithFormatting(wr io.Writer, rLen *reportLen) {
+	t.report(0, rLen, wr)
+}
+
 func (t *Timer) calculateLengths(lengths *reportLen, level int) {
+	if !t.hasActivity() {
+		return
+	}
 	lengths.leaderLen = max(lengths.leaderLen, level*2+len(t.Name))
 	lengths.totalLen = max(lengths.totalLen, len(fmt.Sprintf("%v", t.TotalElapsed)))
 	lengths.callsLen = max(lengths.callsLen, len(fmt.Sprintf("%v", t.CalledTimes)))
@@ -236,4 +232,13 @@ func (t *Timer) report(lev int, rLen *reportLen, wr io.Writer) {
 	for _, c := range t.Children {
 		c.report(lev+1, rLen, wr)
 	}
+}
+
+func (t *Timer) hasActivity() bool {
+	for _, c := range t.Children {
+		if c.hasActivity() {
+			return true
+		}
+	}
+	return t.TotalElapsed > 0
 }
