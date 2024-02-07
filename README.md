@@ -127,81 +127,81 @@ In this example, `main()` calls `outer()`, which calls `middle()`, which calls `
 package main
 
 import (
-	"os"
-	"time"
+    "os"
+    "time"
 
-	"github.com/KarelKubat/calltimer"
+    "github.com/KarelKubat/calltimer"
 )
 
 var (
-	mainTimer   = calltimer.MustNew("main", nil)
-	outerTimer  = calltimer.MustNew("outer", mainTimer)
-	middleTimer = calltimer.MustNew("middle", outerTimer)
-	innerTimer  = calltimer.MustNew("inner", middleTimer)
+    mainTimer   = calltimer.MustNew("main", nil)
+    outerTimer  = calltimer.MustNew("outer", mainTimer)
+    middleTimer = calltimer.MustNew("middle", outerTimer)
+    innerTimer  = calltimer.MustNew("inner", middleTimer)
 
-	delay = time.Millisecond * 10
+    delay = time.Millisecond * 10
 )
 
 // Estimated runtime: 10ms
 func inner() {
-	defer innerTimer.LogSince(time.Now())
-	time.Sleep(delay)
+    defer innerTimer.LogSince(time.Now())
+    time.Sleep(delay)
 }
 
 // Estimated runtime: 4x the runtime of inner, so 40ms
 func middle() {
-	defer middleTimer.LogSince(time.Now())
-	for i := 0; i < 4; i++ {
-		inner()
-	}
+    defer middleTimer.LogSince(time.Now())
+    for i := 0; i < 4; i++ {
+        inner()
+    }
 }
 
 // Estimated runtime: 3x (runtime of middle + 10ms), so 150ms
 func outer() {
-	defer outerTimer.LogSince(time.Now())
-	for i := 0; i < 3; i++ {
-		time.Sleep(delay)
-		middle()
-	}
+    defer outerTimer.LogSince(time.Now())
+    for i := 0; i < 3; i++ {
+        time.Sleep(delay)
+        middle()
+    }
 }
 
 // Estimated runtime: 2x the runtime of outer, so 300ms
 func main() {
-	start := time.Now()
-	for i := 0; i < 2; i++ {
-		outer()
-	}
-	mainTimer.LogSince(start)
+    start := time.Now()
+    for i := 0; i < 2; i++ {
+        outer()
+    }
+    mainTimer.LogSince(start)
 
-	// Default:
-	// calltimer.OutputFormat = calltimer.Table
-	calltimer.ReportAll(os.Stdout)
-	// Example output:
-	// +-------------+--------------+--------------+-------------------+
-	// |  Timer name |   Total time | Nr. of calls | Average time/call |
-	// +-------------+--------------+--------------+-------------------+
-	// | main        | 333.963583ms |            1 |      333.963583ms |
-	// |   outer     | 333.962417ms |            2 |      166.981208ms |
-	// |     middle  | 267.721834ms |            6 |       44.620305ms |
-	// |       inner |  267.69479ms |           24 |       11.153949ms |
-	// +-------------+--------------+--------------+-------------------+
+    // Default:
+    // calltimer.OutputFormat = calltimer.Table
+    calltimer.ReportAll(os.Stdout)
+    // Example output:
+    // +-------------+--------------+--------------+-------------------+
+    // |  Timer name |   Total time | Nr. of calls | Average time/call |
+    // +-------------+--------------+--------------+-------------------+
+    // | main        | 333.963583ms |            1 |      333.963583ms |
+    // |   outer     | 333.962417ms |            2 |      166.981208ms |
+    // |     middle  | 267.721834ms |            6 |       44.620305ms |
+    // |       inner |  267.69479ms |           24 |       11.153949ms |
+    // +-------------+--------------+--------------+-------------------+
 
-	calltimer.OutputFormat = calltimer.PlainText
-	calltimer.ReportAll(os.Stdout)
-	// Example output:
-	// main        total 333.963583ms in  1 calls, avg 333.963583ms
-	//   outer     total 333.962417ms in  2 calls, avg 166.981208ms
-	//     middle  total 267.721834ms in  6 calls, avg  44.620305ms
-	// 	     inner total  267.69479ms in 24 calls, avg  11.153949ms
+    calltimer.OutputFormat = calltimer.PlainText
+    calltimer.ReportAll(os.Stdout)
+    // Example output:
+    // main        total 333.963583ms in  1 calls, avg 333.963583ms
+    //   outer     total 333.962417ms in  2 calls, avg 166.981208ms
+    //     middle  total 267.721834ms in  6 calls, avg  44.620305ms
+    // 	     inner total  267.69479ms in 24 calls, avg  11.153949ms
 
-	calltimer.OutputFormat = calltimer.CSV
-	calltimer.ReportAll(os.Stdout)
-	// Example output:
-	// Timer;Total;Calls;Average
-	// main;333.963583ms;1;333.963583ms
-	// outer;333.962417ms;2;166.981208ms
-	// middle;267.721834ms;6;44.620305ms
-	// inner;267.69479ms;24;11.153949ms
+    calltimer.OutputFormat = calltimer.CSV
+    calltimer.ReportAll(os.Stdout)
+    // Example output:
+    // Timer;Total;Calls;Average
+    // main;333.963583ms;1;333.963583ms
+    // outer;333.962417ms;2;166.981208ms
+    // middle;267.721834ms;6;44.620305ms
+    // inner;267.69479ms;24;11.153949ms
 }
 ```
 
@@ -212,108 +212,108 @@ func main() {
 package main
 
 import (
-	"os"
-	"sync"
-	"time"
+    "os"
+    "sync"
+    "time"
 
-	"github.com/KarelKubat/calltimer"
+    "github.com/KarelKubat/calltimer"
 )
 
 var (
-	outerTimer   = calltimer.MustNew("outer", nil)
-	middle1Timer = calltimer.MustNew("middle1", outerTimer)
-	middle2Timer = calltimer.MustNew("middle2", outerTimer)
-	innerTimer   = calltimer.MustNew("inner", middle1Timer)
+    outerTimer   = calltimer.MustNew("outer", nil)
+    middle1Timer = calltimer.MustNew("middle1", outerTimer)
+    middle2Timer = calltimer.MustNew("middle2", outerTimer)
+    innerTimer   = calltimer.MustNew("inner", middle1Timer)
 
-	delay = time.Millisecond * 10
+    delay = time.Millisecond * 10
 )
 
 // Estimated runtime: 10ms
 func inner() {
-	defer innerTimer.LogSince(time.Now())
-	time.Sleep(delay)
+    defer innerTimer.LogSince(time.Now())
+    time.Sleep(delay)
 }
 
 // Estimated runtime: 4x the runtime of inner, so 40ms
 func middle1() {
-	defer middle1Timer.LogSince(time.Now())
-	for i := 0; i < 4; i++ {
-		inner()
-	}
+    defer middle1Timer.LogSince(time.Now())
+    for i := 0; i < 4; i++ {
+        inner()
+    }
 }
 
 // Estimated runtime: the runtime of inner, so 10ms
 // inner() gets invoked 4x, but in parallel - counts as one.
 func middle2() {
-	defer middle2Timer.LogSince(time.Now())
-	var wg sync.WaitGroup
-	for i := 0; i < 4; i++ {
-		wg.Add(1)
-		go func() {
-			inner()
-			wg.Done()
-		}()
-	}
-	wg.Wait()
+    defer middle2Timer.LogSince(time.Now())
+    var wg sync.WaitGroup
+    for i := 0; i < 4; i++ {
+        wg.Add(1)
+        go func() {
+            inner()
+            wg.Done()
+        }()
+    }
+    wg.Wait()
 }
 
 // Estimated runtime: 3x the runtime of middle1, plus 3x the runtime of middle2
 // so 3x40ms + 3x10ms = 150ms
 func outer() {
-	defer outerTimer.LogSince(time.Now())
-	for i := 0; i < 3; i++ {
-		middle1()
-	}
-	for i := 0; i < 3; i++ {
-		middle2()
-	}
+    defer outerTimer.LogSince(time.Now())
+    for i := 0; i < 3; i++ {
+        middle1()
+    }
+    for i := 0; i < 3; i++ {
+        middle2()
+    }
 }
 
 func main() {
-	// Another root timer, just a dummy.
-	dummyTop := calltimer.MustNew("dummy-top", nil)
-	dummySub := calltimer.MustNew("dummy-sub", dummyTop)
+    // Another root timer, just a dummy.
+    dummyTop := calltimer.MustNew("dummy-top", nil)
+    dummySub := calltimer.MustNew("dummy-sub", dummyTop)
 
-	// Create some activity in the timers outerTimer, and hence in
-	// middle1Timer, middle2Timer and in innerTimer.
-	for i := 0; i < 2; i++ {
-		outer()
-	}
+    // Create some activity in the timers outerTimer, and hence in
+    // middle1Timer, middle2Timer and in innerTimer.
+    for i := 0; i < 2; i++ {
+        outer()
+    }
 
-	calltimer.ReportAll(os.Stdout)
-	// Example output, using the default format calltimer.Table:
-	// +------------+--------------+--------------+-------------------+
-	// | Timer name |   Total time | Nr. of calls | Average time/call |
-	// +------------+--------------+--------------+-------------------+
-	// | outer      | 332.675042ms |            2 |      166.337521ms |
-	// |   middle1  | 265.168457ms |            6 |       44.194742ms |
-	// |     inner  | 533.427539ms |           48 |       11.113073ms |
-	// |   middle2  |  67.494167ms |            6 |       11.249027ms |
-	// +------------+--------------+--------------+-------------------+
-	// Notes:
-	// - inner is only reported under middle1, that is the timer's parent/child
-	//   relationship
-	// - There is no output for dummy-top, as there is no activity.
+    calltimer.ReportAll(os.Stdout)
+    // Example output, using the default format calltimer.Table:
+    // +------------+--------------+--------------+-------------------+
+    // | Timer name |   Total time | Nr. of calls | Average time/call |
+    // +------------+--------------+--------------+-------------------+
+    // | outer      | 332.675042ms |            2 |      166.337521ms |
+    // |   middle1  | 265.168457ms |            6 |       44.194742ms |
+    // |     inner  | 533.427539ms |           48 |       11.113073ms |
+    // |   middle2  |  67.494167ms |            6 |       11.249027ms |
+    // +------------+--------------+--------------+-------------------+
+    // Notes:
+    // - inner is only reported under middle1, that is the timer's parent/child
+    //   relationship
+    // - There is no output for dummy-top, as there is no activity.
 
-	// Create some activity in dummySub.
-	dummySub.LogDuration(time.Second)
+    // Create some activity in dummySub.
+    dummySub.LogDuration(time.Second)
 
-	calltimer.ReportAll(os.Stdout)
-	// Example output, which now reports on two root timers:
-	// +-------------+--------------+--------------+-------------------+
-	// |  Timer name |   Total time | Nr. of calls | Average time/call |
-	// +-------------+--------------+--------------+-------------------+
-	// | outer       | 332.675042ms |            2 |      166.337521ms |
-	// |   middle1   | 265.168457ms |            6 |       44.194742ms |
-	// |     inner   | 533.427539ms |           48 |       11.113073ms |
-	// |   middle2   |  67.494167ms |            6 |       11.249027ms |
-	// +-------------+--------------+--------------+-------------------+
-	// +-------------+--------------+--------------+-------------------+
-	// |  Timer name |   Total time | Nr. of calls | Average time/call |
-	// +-------------+--------------+--------------+-------------------+
-	// | dummy-top   |           0s |            0 |                   |
-	// |   dummy-sub |           1s |            1 |                1s |
-	// +-------------+--------------+--------------+-------------------+
+    calltimer.ReportAll(os.Stdout)
+    // Example output, which now reports on two root timers:
+    // +-------------+--------------+--------------+-------------------+
+    // |  Timer name |   Total time | Nr. of calls | Average time/call |
+    // +-------------+--------------+--------------+-------------------+
+    // | outer       | 332.675042ms |            2 |      166.337521ms |
+    // |   middle1   | 265.168457ms |            6 |       44.194742ms |
+    // |     inner   | 533.427539ms |           48 |       11.113073ms |
+    // |   middle2   |  67.494167ms |            6 |       11.249027ms |
+    // +-------------+--------------+--------------+-------------------+
+    // +-------------+--------------+--------------+-------------------+
+    // |  Timer name |   Total time | Nr. of calls | Average time/call |
+    // +-------------+--------------+--------------+-------------------+
+    // | dummy-top   |           0s |            0 |                   |
+    // |   dummy-sub |           1s |            1 |                1s |
+    // +-------------+--------------+--------------+-------------------+
 }
 ```
 
