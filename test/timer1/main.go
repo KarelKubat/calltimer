@@ -47,11 +47,34 @@ func main() {
 		outer()
 	}
 	mainTimer.LogSince(start)
-	calltimer.ReportAll(os.Stdout)
 
+	// Default:
+	// calltimer.OutputFormat = calltimer.Table
+	calltimer.ReportAll(os.Stdout)
 	// Example output:
-	// main        total 328.434958ms in  1 calls, avg 328.434958ms
-	//   outer     total 328.433792ms in  2 calls, avg 164.216896ms
-	// 	   middle  total 262.526374ms in  6 calls, avg  43.754395ms
-	//   	 inner total 262.508876ms in 24 calls, avg  10.937869ms
+	// +-------------+--------------+--------------+-------------------+
+	// |  Timer name |   Total time | Nr. of calls | Average time/call |
+	// +-------------+--------------+--------------+-------------------+
+	// | main        | 333.963583ms |            1 |      333.963583ms |
+	// |   outer     | 333.962417ms |            2 |      166.981208ms |
+	// |     middle  | 267.721834ms |            6 |       44.620305ms |
+	// |       inner |  267.69479ms |           24 |       11.153949ms |
+	// +-------------+--------------+--------------+-------------------+
+
+	calltimer.OutputFormat = calltimer.PlainText
+	calltimer.ReportAll(os.Stdout)
+	// Example output:
+	// main        total 333.963583ms in  1 calls, avg 333.963583ms
+	//   outer     total 333.962417ms in  2 calls, avg 166.981208ms
+	//     middle  total 267.721834ms in  6 calls, avg  44.620305ms
+	// 	     inner total  267.69479ms in 24 calls, avg  11.153949ms
+
+	calltimer.OutputFormat = calltimer.CSV
+	calltimer.ReportAll(os.Stdout)
+	// Example output:
+	// Timer;Total;Calls;Average
+	// main;333.963583ms;1;333.963583ms
+	// outer;333.962417ms;2;166.981208ms
+	// middle;267.721834ms;6;44.620305ms
+	// inner;267.69479ms;24;11.153949ms
 }

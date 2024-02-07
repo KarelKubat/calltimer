@@ -31,10 +31,28 @@ type Timer struct {
 	mu           sync.Mutex    // Per-timer lock
 }
 
+/*
+OutputFormat defines how Report or ReportAll present data.
+*/
+type Format int
+
+const (
+	Table     Format = iota // Present data as a table
+	PlainText               // Present data in somewhat readable text format
+	CSV                     // Present data as semicolon-separated values
+
+	leaderLabel = "Timer name"
+	totalLabel  = "Total time"
+	callsLabel  = "Nr. of calls"
+	avgLabel    = "Average time/call"
+)
+
 var (
-	timers = map[string]*Timer{} // Map of timers to avoid duplicate names
-	roots  = []*Timer{}          // List of roots to ReportAll()
-	mu     sync.Mutex            // Global lock for manipulation of global vars
+	timers       = map[string]*Timer{}         // Map of timers to avoid duplicate names
+	roots        = []*Timer{}                  // List of roots to ReportAll()
+	mu           sync.Mutex                    // Global lock for manipulation of global vars
+	OutputFormat Format                = Table // Current output format, defaults to Table
+
 )
 
 /*
@@ -217,6 +235,78 @@ func (t *Timer) calculateLengths(lengths *reportLen, level int) {
 }
 
 func (t *Timer) report(lev int, rLen *reportLen, wr io.Writer) {
+	switch OutputFormat {
+	case Table:
+		t.reportTable(lev, rLen, wr)
+	case PlainText:
+		t.reportPlainText(lev, rLen, wr)
+	case CSV:
+		t.reportCSV(lev, wr)
+	}
+}
+
+func (t *Timer) reportTable(lev int, rLen *reportLen, wr io.Writer) {
+	ruler := func(rLen *reportLen) {
+		fmt.Fprint(wr, "+")
+		for i := 0; i < rLen.leaderLen+2; i++ {
+			fmt.Fprint(wr, "-")
+		}
+		fmt.Fprint(wr, "+")
+		for i := 0; i < rLen.totalLen+2; i++ {
+			fmt.Fprint(wr, "-")
+		}
+		fmt.Fprint(wr, "+")
+		for i := 0; i < rLen.callsLen+2; i++ {
+			fmt.Fprint(wr, "-")
+		}
+		fmt.Fprint(wr, "+")
+		for i := 0; i < rLen.avgLen+2; i++ {
+			fmt.Fprint(wr, "-")
+		}
+		fmt.Fprintln(wr, "+")
+	}
+	if lev == 0 {
+		rLen.leaderLen = max(rLen.leaderLen, len(leaderLabel))
+		rLen.totalLen = max(rLen.totalLen, len(totalLabel))
+		rLen.callsLen = max(rLen.callsLen, len(callsLabel))
+		rLen.avgLen = max(rLen.avgLen, len(avgLabel))
+
+		ruler(rLen)
+		fmt.Fprintf(wr, "| %*s | %*s | %*s | %*s |\n",
+			rLen.leaderLen, leaderLabel,
+			rLen.totalLen, totalLabel,
+			rLen.callsLen, callsLabel,
+			rLen.avgLen, avgLabel)
+		ruler(rLen)
+	}
+	fmt.Fprint(wr, "| ")
+	for i := 0; i < lev; i++ {
+		fmt.Fprint(wr, "  ")
+	}
+	fmt.Fprint(wr, t.Name)
+	for printed := lev*2 + len(t.Name); printed <= rLen.leaderLen; printed++ {
+		fmt.Fprint(wr, " ")
+	}
+
+	var avg string
+	if t.CalledTimes > 0 {
+		avg = fmt.Sprintf("%v", t.TotalElapsed/time.Duration(t.CalledTimes))
+	}
+	fmt.Fprintf(wr, "| %*v | %*v | %*v |\n",
+		rLen.totalLen, t.TotalElapsed,
+		rLen.callsLen, t.CalledTimes,
+		rLen.avgLen, avg)
+
+	for _, c := range t.Children {
+		c.reportTable(lev+1, rLen, wr)
+	}
+
+	if lev == 0 {
+		ruler(rLen)
+	}
+}
+
+func (t *Timer) reportPlainText(lev int, rLen *reportLen, wr io.Writer) {
 	for i := 0; i < lev; i++ {
 		fmt.Fprint(wr, "  ")
 	}
@@ -234,6 +324,21 @@ func (t *Timer) report(lev int, rLen *reportLen, wr io.Writer) {
 
 	for _, c := range t.Children {
 		c.report(lev+1, rLen, wr)
+	}
+}
+
+func (t *Timer) reportCSV(lev int, wr io.Writer) {
+	if lev == 0 {
+		fmt.Fprintln(wr, "Timer;Total;Calls;Average")
+	}
+	fmt.Fprintf(wr, "%v;%v;%v;", t.Name, t.TotalElapsed, t.CalledTimes)
+	if t.CalledTimes > 0 {
+		fmt.Fprintf(wr, "%v", t.TotalElapsed/time.Duration(t.CalledTimes))
+	}
+	fmt.Fprintln(wr)
+
+	for _, c := range t.Children {
+		c.reportCSV(lev+1, wr)
 	}
 }
 

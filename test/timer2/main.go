@@ -71,11 +71,15 @@ func main() {
 	}
 
 	calltimer.ReportAll(os.Stdout)
-	// Example output:
-	// 	outer       total 328.324125ms in  2 calls, avg 164.162062ms
-	// 	  middle1   total 262.224458ms in  6 calls, avg  43.704076ms
-	// 	    inner   total 524.960087ms in 48 calls, avg  10.936668ms
-	// 	  middle2   total  66.091876ms in  6 calls, avg  11.015312ms
+	// Example output, using the default format calltimer.Table:
+	// +------------+--------------+--------------+-------------------+
+	// | Timer name |   Total time | Nr. of calls | Average time/call |
+	// +------------+--------------+--------------+-------------------+
+	// | outer      | 332.675042ms |            2 |      166.337521ms |
+	// |   middle1  | 265.168457ms |            6 |       44.194742ms |
+	// |     inner  | 533.427539ms |           48 |       11.113073ms |
+	// |   middle2  |  67.494167ms |            6 |       11.249027ms |
+	// +------------+--------------+--------------+-------------------+
 	// Notes:
 	// - inner is only reported under middle1, that is the timer's parent/child
 	//   relationship
@@ -86,10 +90,18 @@ func main() {
 
 	calltimer.ReportAll(os.Stdout)
 	// Example output, which now reports on two root timers:
-	// 	outer       total  329.21975ms in  2 calls, avg 164.609875ms
-	// 	  middle1   total 263.650418ms in  6 calls, avg  43.941736ms
-	// 	    inner   total 524.486669ms in 48 calls, avg  10.926805ms
-	// 	  middle2   total  65.561709ms in  6 calls, avg  10.926951ms
-	//  dummy-top   total           0s in  0 calls
-	// 	  dummy-sub total           1s in  1 calls, avg           1s
+	// +-------------+--------------+--------------+-------------------+
+	// |  Timer name |   Total time | Nr. of calls | Average time/call |
+	// +-------------+--------------+--------------+-------------------+
+	// | outer       | 332.675042ms |            2 |      166.337521ms |
+	// |   middle1   | 265.168457ms |            6 |       44.194742ms |
+	// |     inner   | 533.427539ms |           48 |       11.113073ms |
+	// |   middle2   |  67.494167ms |            6 |       11.249027ms |
+	// +-------------+--------------+--------------+-------------------+
+	// +-------------+--------------+--------------+-------------------+
+	// |  Timer name |   Total time | Nr. of calls | Average time/call |
+	// +-------------+--------------+--------------+-------------------+
+	// | dummy-top   |           0s |            0 |                   |
+	// |   dummy-sub |           1s |            1 |                1s |
+	// +-------------+--------------+--------------+-------------------+
 }
