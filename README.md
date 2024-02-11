@@ -106,6 +106,14 @@ The format report can be controlled by setting the variable `calltimer.OutputFor
 
 See also `test/timer2/main.go` for an example.
 
+The metrics of each individual timer can also be accessed programmatically. Given a timer `tm`:
+
+- `tm.Name` is the identifier,
+- `tm.TotalElapsed` is the time that was logged using `tm.LogSince()` or `tm.LogDuration()`,
+- `tm.CalledTimes` is the number of times that `tm.Log*()` was called,
+- `tm.Parent` is the parent timer, or `nil` when `tm` is a "root" timer,
+- `tm.Children` are the child timers.
+
 ### Disabling sampling and reporting
 
 After testing and evaluating, the code that drives duration sampling and reporting can be left in place, though reduced to no-ops:

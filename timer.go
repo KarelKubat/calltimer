@@ -272,7 +272,7 @@ func (t *Timer) reportTable(lev int, rLen *reportLen, wr io.Writer) {
 		rLen.avgLen = max(rLen.avgLen, len(avgLabel))
 
 		ruler(rLen)
-		fmt.Fprintf(wr, "| %*s | %*s | %*s | %*s |\n",
+		fmt.Fprintf(wr, "| %-*s | %*s | %*s | %*s |\n",
 			rLen.leaderLen, leaderLabel,
 			rLen.totalLen, totalLabel,
 			rLen.callsLen, callsLabel,
